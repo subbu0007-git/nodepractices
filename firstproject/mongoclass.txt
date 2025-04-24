@@ -1,0 +1,120 @@
+const express = require("express");
+const fs = require("fs");
+const mongoose = require("mongoose");
+
+const app = express();
+const port = 8000
+
+// connection to mongoose
+mongoose
+    .connect('mongodb://localhost:27017/admin')
+    .then(() => console.log("MongoDb Conneceted"))
+    .catch((err) => console.log("MongoDb Error", err))
+
+// mongo db schema
+const userSchema = new mongoose.Schema({
+    first_name: {
+        type: String,
+        require: true,
+    },
+    last_name: {
+        type: String,
+    },
+    email: {
+        type: String,
+        require: true,
+        unique: true,
+    },
+    job_title: {
+        type: String,
+    },
+    salary: {
+        type: Number,
+    },
+
+}, { timestamps: true })
+
+const User = mongoose.model("user", userSchema);
+
+
+// middleware - pulgin
+app.use(express.urlencoded({ extended: false }))
+
+
+// routes
+// app.get("/api/users", async (req, res) => {
+//     const allUsers = await User.find({})
+//     const html = `
+//     <ul>
+//     ${allUsers?.map((item) => `<li>${item?.first_name} - ${item?.email}</li>`).join('')}
+//     </ul>
+//     `
+//     res.status(400).send(html)
+// })
+
+// Rest Api's
+app.get("/api/users", async (req, res) => {
+    const allUsers = await User.find({})
+    return res.status(200).json({ msg: "users fetch successful", allUsers });
+})
+
+
+app.route("/api/users/:id")
+    .get(async (req, res) => {
+        const user = await User.findById(req?.params?.id)
+        if (!user) return res.status(400).json({ msg: "user not found" })
+        return res.status(200).json(user)
+    })
+    .put(async (req, res) => {
+        const user = await User.findByIdAndUpdate(req?.params?.id, {
+            // first_name: body?.first_name,
+            // last_name: body?.last_name,
+            // email: body?.email,
+            job_title: "React native",
+            // salary: body?.salary,
+        });
+        if (!user) return res.status(400).json({ msg: "user not found" })
+        return res.status(200).json({ msg: "updated sucessfully" })
+    })
+    .delete(async (req, res) => {
+        const user = await User.findByIdAndDelete(req?.params?.id);
+        if (!user) return res.status(400).json({ msg: "user not found" })
+        return res.status(200).json({ msg: "record deleted sucessfully" })
+    })
+
+app.post("/api/users", async (req, res) => {
+    const body = req.body;
+    console.log("i am body from post", body)
+    if (
+        !body ||
+        !body.first_name ||
+        !body.last_name ||
+        !body.email ||
+        !body.job_title ||
+        !body.salary
+    ) {
+        return res.status(400).json({ msg: "All fields are req..." })
+    }
+
+    const response = await User.create({
+        first_name: body?.first_name,
+        last_name: body?.last_name,
+        email: body?.email,
+        job_title: body?.job_title,
+        salary: body?.salary,
+    })
+    console.log("here is the post response", response)
+    return res.status(201).json({ msg: "recorded created succesfully" })
+})
+
+
+// app.get("/api/users/:id", (req, res) => {
+//     const id = Number(req?.params?.id);
+//     const user = users?.find((data) => data?.id === id)
+//     return res.json(user)
+// })
+
+
+
+
+app.listen(port, () => { console.log(`FirstPROJECt app listening on port ${port}`) })
